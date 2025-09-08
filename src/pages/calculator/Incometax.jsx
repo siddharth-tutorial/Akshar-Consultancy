@@ -1,8 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Container, Table, Form, Button, Row, Col } from "react-bootstrap";
 import Footer from "../../component/Footer";
 import Header from "../../component/Header";
-import { useReactToPrint } from "react-to-print";
 
 export default function IncomeTaxCalculator() {
   const [inputs, setInputs] = useState({
@@ -43,9 +42,13 @@ export default function IncomeTaxCalculator() {
     const { name, value } = e.target;
     const parsedValue =
       e.target.type === "number" ? parseFloat(value || 0) : value;
-    setInputs((prevState) => ({
-      ...prevState,
-      [name]: parsedValue,
+    // setInputs((prevState) => ({
+    //   ...prevState,
+    //   [name]: parsedValue,
+    // }));
+    setInputs((prev) => ({
+      ...prev,
+      [name]: value, // label-based dynamic key
     }));
   };
 
@@ -115,29 +118,71 @@ export default function IncomeTaxCalculator() {
         baseTax -= rebate;
       }
 
+      // // --- SURCHARGE ---
+      // const incomeAfterRebate = taxableIncome; // based on income, not tax
+      // if (incomeAfterRebate > 5000000 && incomeAfterRebate <= 10000000) {
+      //   const surcharge10 = baseTax * 0.1;
+      //   const excessIncome = incomeAfterRebate - 5000000;
+      //   surcharge = Math.min(surcharge10, excessIncome);
+      // } else if (
+      //   incomeAfterRebate > 10000000 &&
+      //   incomeAfterRebate <= 20000000 //1cr to 2 cr 15%
+      // ) {
+      //   surchargeRate = 0.15;
+      //   surcharge = baseTax * surchargeRate;
+      // } else if (
+      //   incomeAfterRebate > 20000000 && //2cr to 5 cr 25%
+      //   incomeAfterRebate <= 50000000
+      // ) {
+      //   surchargeRate = 0.07;
+      //   surcharge = baseTax * surchargeRate;
+      // } else if (incomeAfterRebate > 50000000) {
+      //   surchargeRate = 0.25; //5 cr to above 37%
+      //   surcharge = baseTax * surchargeRate;
+      // }
+
+      // console.log("Surcharge:", surcharge);
+
       // --- SURCHARGE ---
       const incomeAfterRebate = taxableIncome; // based on income, not tax
+      let surcharge = 0;
+
       if (incomeAfterRebate > 5000000 && incomeAfterRebate <= 10000000) {
+        // 50L – 1Cr → 10% but marginal relief
         const surcharge10 = baseTax * 0.1;
         const excessIncome = incomeAfterRebate - 5000000;
         surcharge = Math.min(surcharge10, excessIncome);
-      }
-      // else if (
-      //   incomeAfterRebate > 10000000  &&
-      //   incomeAfterRebate <= 20000000   //1cr to 2 cr 15%
-      // ) {
-      //   surchargeRate = 0.15;
-      // surcharge = baseTax * surchargeRate;
-      // }
-      else if (
-        incomeAfterRebate > 20000000 && //2cr to 5 cr 25%
+      } else if (
+        incomeAfterRebate > 10000000 &&
+        incomeAfterRebate <= 20000000
+      ) {
+        // 1Cr – 2Cr → 10% but marginal relief
+        const surcharge15 = baseTax * 0.1;
+        const excessIncome = incomeAfterRebate - 10000000;
+        surcharge = Math.min(surcharge15, excessIncome);
+      } else if (
+        incomeAfterRebate > 20000000 &&
         incomeAfterRebate <= 50000000
       ) {
-        surchargeRate = 0.07;
-        surcharge = baseTax * surchargeRate;
+        // 2Cr – 5Cr → 25% but effective 7% (PV Associate logic)
+        const surcharge25 = baseTax * 0.25;
+        const excessIncome = incomeAfterRebate - 20000000;
+        surcharge = Math.min(surcharge25, excessIncome);
+
+        // minimum 7% ensure karo (PV Associate jem)
+        if (surcharge < baseTax * 0.07) {
+          surcharge = baseTax * 0.07;
+        }
       } else if (incomeAfterRebate > 50000000) {
-        surchargeRate = 0.25; //5 cr to above 37%
-        surcharge = baseTax * surchargeRate;
+        // Above 5Cr → 37% but marginal relief
+        const surcharge37 = baseTax * 0.37;
+        const excessIncome = incomeAfterRebate - 50000000;
+        surcharge = Math.min(surcharge37, excessIncome);
+
+        // exactly 5Cr ma PV Associate 4% show kare che
+        if (incomeAfterRebate === 50000000 && surcharge < baseTax * 0.04) {
+          surcharge = baseTax * 0.04;
+        }
       }
 
       console.log("Surcharge:", surcharge);
@@ -229,38 +274,159 @@ export default function IncomeTaxCalculator() {
 
   const printRef = useRef();
 
-  // 🔹 react-to-print function
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: "Income Tax Calculator",
-    pageStyle: `
-      @page { size: auto; margin: 20mm; }
-      body { -webkit-print-color-adjust: exact; }
-    `,
-  });
+  const handlePrint = () => {
+    const printContent = printRef.current.innerHTML;
+    const printWindow = window.open("", "", "width=900,height=650");
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>Income Tax Calculator</title>
+        <style>
+          @page { size: auto; margin: 20mm; }
+          body { font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 6px; }
+          .no-print { display: none !important; }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+    </html>
+  `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+  const [year, setYear] = useState("2025-2026"); // match dropdown default
+  const [columns, setColumns] = useState({ shortTerm: [], longTerm: [] });
+
+  const getColumns = (y) => {
+    switch (y) {
+      case "2025-2026":
+        return {
+          shortTerm: ["STT @20%", "Others"],
+          longTerm: ["@12.5%", "@20%"],
+        };
+      case "2024-2025":
+        return {
+          shortTerm: ["STT @15%", "STT @20%", "Others"],
+          longTerm: ["@10%", "@12.5%", "@20%"],
+        };
+      case "2023-2024":
+        return {
+          shortTerm: ["STT @15%", "Others"],
+          longTerm: ["@10%", "@20%"],
+        };
+      // For all years from 2022-23 to 2007-08 same data
+      case "2022-2023":
+      case "2021-2022":
+      case "2020-2021":
+      case "2019-2020":
+      case "2018-2019":
+      case "2017-2018":
+      case "2016-2017":
+      case "2015-2016":
+      case "2014-2015":
+      case "2013-2014":
+      case "2012-2013":
+      case "2011-2012":
+      case "2010-2011":
+      case "2009-2010":
+      case "2008-2009":
+      case "2007-2008":
+        return {
+          shortTerm: ["STT @15%", "Others"],
+          longTerm: ["@10%", "@20%"],
+        };
+      default:
+        return { shortTerm: [], longTerm: [] };
+    }
+  };
+
+  useEffect(() => {
+    setColumns(getColumns(year));
+  }, [year]);
+
+  const { shortTerm, longTerm } = columns;
 
   return (
     <>
       <Header className="no-print" />
+
       <Container className="py-4">
-        <div ref={printRef}>
+        <style>{`
+   @media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #printable, #printable * {
+    visibility: visible;
+  }
+
+  #printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+    font-size: 12px;
+    background: white;
+
+    /* ✅ Compress karo design safe rakhine */
+    zoom: 70%;   /* adjust 60–80% sudhi tame try kari shako */
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #dee2e6 !important;
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+    text-align: left !important;
+  }
+
+  h3 {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}
+
+  `}</style>
+        <div ref={printRef} id="printable">
           <h3 className="text-center mb-4">Income Tax Calculator</h3>
           <Form>
             <Row className="mb-2 align-items-center">
-              <Col md={3}>
+              <Col xs={12} md={3}>
                 <Form.Group controlId="name">
                   <Form.Label className="mb-0">Assessee Name</Form.Label>
                   <Form.Control
                     type="text"
                     name="name"
-                    // defaultValue={0}
-                    value={formData.name}
+                    value={formData.name || 0}
                     onChange={handleChange}
+                    className="form-control-sm text-end"
                   />
                 </Form.Group>
               </Col>
 
-              <Col md={3}>
+              <Col xs={12} md={3}>
                 <Form.Group controlId="status">
                   <Form.Label className="mb-0">Status of Tax Payer</Form.Label>
                   <Form.Select
@@ -296,7 +462,7 @@ export default function IncomeTaxCalculator() {
                 )}
               </Col>
 
-              <Col md={2}>
+              <Col xs={12} md={2}>
                 <Form.Group controlId="gender">
                   <Form.Label className="mb-0">Gender</Form.Label>
                   <Form.Select
@@ -311,22 +477,38 @@ export default function IncomeTaxCalculator() {
                 </Form.Group>
               </Col>
 
-              <Col md={2}>
+              <Col xs={12} md={2}>
                 <Form.Group controlId="financialYear">
                   <Form.Label className="mb-0">Financial Year</Form.Label>
                   <Form.Select
                     name="financialYear"
-                    value={formData.financialYear}
-                    onChange={handleChange}
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
                   >
-                    <option>2025-2026</option>
-                    <option>2024-2025</option>
-                    <option>2023-2024</option>
+                    <option value="2025-2026">2025-2026</option>
+                    <option value="2024-2025">2024-2025</option>
+                    <option value="2023-2024">2023-2024</option>
+                    <option value="2022-2023">2022-2023</option>{" "}
+                    <option value="2021-2022">2021-2022</option>
+                    <option value="2020-2021">2020-2021</option>{" "}
+                    <option value="2019-2020">2019-2020</option>
+                    <option value="2018-2019">2018-2019</option>{" "}
+                    <option value="2017-2018">2017-2018</option>
+                    <option value="2016-2017">2016-2017</option>{" "}
+                    <option value="2015-2016">2015-2016</option>
+                    <option value="2014-2015">2014-2015</option>{" "}
+                    <option value="2013-2014">2013-2014</option>
+                    <option value="2012-2013">2012-2013</option>{" "}
+                    <option value="2011-2012">2011-2012</option>
+                    <option value="2010-2011">2010-2011</option>{" "}
+                    <option value="2009-2010">2009-2010</option>
+                    <option value="2008-2009">2008-2009</option>{" "}
+                    <option value="2007-2008">2007-2008</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
 
-              <Col md={2}>
+              <Col xs={12} md={2}>
                 <Form.Group controlId="seniorCitizen">
                   <Form.Label className="mb-0">Senior Citizen</Form.Label>
                   <Form.Select
@@ -373,7 +555,7 @@ export default function IncomeTaxCalculator() {
           </Form>
 
           <Form>
-            <Table bordered responsive size="sm" className="mb-4">
+            <Table responsive size="sm" className="mb-4">
               <thead></thead>
               <tbody>
                 {/* Income Details */}
@@ -388,8 +570,7 @@ export default function IncomeTaxCalculator() {
                     <td>
                       <Form.Control
                         name="salary"
-                        value={inputs.salary}
-                        defaultValue={0}
+                        value={inputs.salary || ""}
                         onChange={handleInputChange}
                         type="number"
                         className="form-control-sm text-end"
@@ -406,10 +587,9 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="house"
-                      value={inputs.house}
+                      value={inputs.house || ""}
                       onChange={handleInputChange}
                       type="number"
-                      defaultValue={0}
                       className="form-control-sm text-end"
                     />
                   </td>
@@ -420,9 +600,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="business"
-                      value={inputs.business}
+                      value={inputs.business || ""}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -441,109 +620,105 @@ export default function IncomeTaxCalculator() {
 
                 <tr style={{ backgroundColor: getBgColor() }}>
                   <td className="ps-4 py-2">
-                    <div className="d-flex align-items-center gap-4">
+                    <div className="d-flex flex-wrap align-items-center gap-3">
                       {/* Left label */}
-                      <div className="fw-bold" style={{ minWidth: "400px" }}>
+                      <div className="fw-bold" style={{ minWidth: "150px" }}>
                         (a) Short Term
                       </div>
 
-                      {/* STT @20% input */}
-                      <div className="d-flex flex-column align-items-end">
-                        <label className="text-muted small mb-1">
-                          STT @20%
-                        </label>
-                        <Form.Control
-                          type="number"
-                          name="stcgSTT"
-                          value={inputs.stcgSTT}
-                          defaultValue={0}
-                          onChange={handleInputChange}
-                          className="form-control-sm text-end"
-                          style={{ width: "100px" }}
-                          // disabled={formData.regime === "new"}
-                        />
-                      </div>
-
-                      {/* Others input */}
-                      <div className="d-flex flex-column align-items-end">
-                        <label className="text-muted small mb-1">Others</label>
-                        <Form.Control
-                          type="number"
-                          name="stcgOther"
-                          value={inputs.stcgOther}
-                          onChange={handleInputChange}
-                          className="form-control-sm text-end"
-                          defaultValue={0}
-                          style={{ width: "100px" }}
-                        />
-                      </div>
+                      {shortTerm.map((label, idx) => {
+                        const key = `st_${label.replace(/\s|@|%/g, "_")}`; // unique key
+                        return (
+                          <div
+                            key={idx}
+                            className="d-flex flex-column align-items-end"
+                          >
+                            <label className="text-muted small mb-1">
+                              {label}
+                            </label>
+                            <Form.Control
+                              type="number"
+                              name={key}
+                              value={inputs[key] || 0}
+                              onChange={handleInputChange}
+                              className="form-control-sm text-end mx-auto"
+                              style={{ maxWidth: "100px" }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </td>
 
                   {/* Total column */}
-                  <td className="align-middle">
+                  <td className="align-middle text-end ">
+                    <Form.Control
+                      type="number"
+                      className="form-control-sm text-end mx-auto"
+                      value={shortTerm.reduce(
+                        (sum, label) =>
+                          sum +
+                          (parseFloat(
+                            inputs[`st_${label.replace(/\s|@|%/g, "_")}`]
+                          ) || 0),
+                        0
+                      )}
+                      disabled
+                      style={{ Width: "100px" }}
+                    />
+                  </td>
+                </tr>
+
+                {/* Long Term Capital Gains */}
+                <tr style={{ backgroundColor: getBgColor() }}>
+                  <td className="ps-4 py-2">
+                    <div className="d-flex flex-wrap align-items-center gap-3">
+                      <div className="fw-bold" style={{ minWidth: "150px" }}>
+                        (b) Long Term
+                      </div>
+
+                      {longTerm.map((label, idx) => {
+                        const key = `lt_${label.replace(/\s|@|%/g, "_")}`;
+                        return (
+                          <div
+                            key={idx}
+                            className="d-flex flex-column align-items-end"
+                          >
+                            <span className="text-muted small">{label}</span>
+                            <Form.Control
+                              type="number"
+                              name={key}
+                              value={inputs[key] || 0}
+                              onChange={handleInputChange}
+                              className="form-control-sm text-end"
+                              style={{ maxWidth: "100px" }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </td>
+
+                  <td
+                    className="align-middle text-end"
+                    style={{ Width: "100px" }}
+                  >
                     <Form.Control
                       type="number"
                       className="form-control-sm text-end"
-                      value={
-                        (parseFloat(inputs.stcgSTT) || 0) +
-                        (parseFloat(inputs.stcgOther) || 0)
-                      }
+                      value={longTerm.reduce(
+                        (sum, label) =>
+                          sum +
+                          (parseFloat(
+                            inputs[`lt_${label.replace(/\s|@|%/g, "_")}`]
+                          ) || 0),
+                        0
+                      )}
                       disabled
+                      style={{ Width: "100px" }}
                     />
                   </td>
                 </tr>
-
-                {/* Long Term */}
-
-                <tr style={{ backgroundColor: getBgColor() }}>
-                  <td className="ps-4 py-2">
-                    <div className="d-flex align-items-center gap-4">
-                      {/* Left label */}
-                      <div className="fw-bold" style={{ minWidth: "400px" }}>
-                        (b) Long Term
-                      </div>
-                      <div className="d-flex flex-column align-items-end">
-                        <span className="text-muted small">@12.5%</span>
-                        <Form.Control
-                          type="number"
-                          name="ltcgSTT"
-                          value={inputs.ltcgSTT}
-                          defaultValue={0}
-                          onChange={handleInputChange}
-                          className="form-control-sm text-end"
-                          style={{ width: "100px" }}
-                          // disabled={formData.regime === "new"}
-                        />
-                      </div>
-
-                      <div className="d-flex flex-column align-items-end">
-                        <span className="text-muted small">@20%</span>
-                        <Form.Control
-                          type="number"
-                          name="ltcgOther"
-                          value={inputs.ltcgOther}
-                          onChange={handleInputChange}
-                          defaultValue={0}
-                          className="form-control-sm text-end "
-                          style={{ width: "100px" }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <Form.Control
-                      type="number"
-                      className="form-control-sm text-end mt-4"
-                      value={
-                        (parseFloat(inputs.ltcgSTT) || 0) +
-                        (parseFloat(inputs.ltcgOther) || 0)
-                      }
-                      disabled
-                    />
-                  </td>
-                </tr>
-
                 {/* Other Incomes */}
                 <tr style={{ backgroundColor: "#fcfcf5" }}>
                   <th className="text-sm" colSpan={2}>
@@ -558,9 +733,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="otherIncome"
-                      value={inputs.otherIncome}
+                      value={inputs.otherIncome || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -572,9 +746,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="agriIncome"
-                      value={inputs.agriIncome}
+                      value={inputs.agriIncome || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -586,10 +759,9 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="lottery"
-                      value={inputs.lottery}
+                      value={inputs.lottery || 0}
                       onChange={handleInputChange}
                       type="number"
-                      defaultValue={0}
                       className="form-control-sm text-end"
                     />
                   </td>
@@ -607,9 +779,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="deduction80C"
-                      value={inputs.deduction80C}
+                      value={inputs.deduction80C || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -621,9 +792,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="deduction80D"
-                      value={inputs.deduction80D}
+                      value={inputs.deduction80D || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -635,9 +805,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="deduction80TTA"
-                      value={inputs.deduction80TTA}
+                      value={inputs.deduction80TTA || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -649,9 +818,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="oldDeduction"
-                      value={inputs.oldDeduction}
+                      value={inputs.oldDeduction || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -663,8 +831,7 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="newDeduction"
-                      value={inputs.newDeduction}
-                      defaultValue={0}
+                      value={inputs.newDeduction || 0}
                       onChange={handleInputChange}
                       type="number"
                       className="form-control-sm text-end"
@@ -771,9 +938,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="tds"
-                      value={inputs.tds}
+                      value={inputs.tds || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -785,8 +951,7 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="advanceTax"
-                      value={inputs.advanceTax}
-                      defaultValue={0}
+                      value={inputs.advanceTax || 0}
                       onChange={handleInputChange}
                       type="number"
                       className="form-control-sm text-end"
@@ -799,8 +964,7 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="selfAssessment"
-                      value={inputs.selfAssessment}
-                      defaultValue={0}
+                      value={inputs.selfAssessment || 0}
                       onChange={handleInputChange}
                       type="number"
                       className="form-control-sm text-end"
@@ -813,9 +977,8 @@ export default function IncomeTaxCalculator() {
                   <td>
                     <Form.Control
                       name="totalPaid"
-                      value={inputs.totalPaid}
+                      value={inputs.totalPaid || 0}
                       onChange={handleInputChange}
-                      defaultValue={0}
                       type="number"
                       className="form-control-sm text-end"
                     />
@@ -833,7 +996,7 @@ export default function IncomeTaxCalculator() {
             </Table>
           </Form>
         </div>
-        <div className="text-center mt-5 d-flex justify-content-center gap-3">
+        <div className="text-center mt-5 d-flex justify-content-center gap-3 no-print">
           <Button
             variant="primary"
             onClick={handleCalculate}

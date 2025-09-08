@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../component/Header";
 import { Container, Row, Col, Card, Breadcrumb } from "react-bootstrap";
 import { Link } from "react-router-dom";
@@ -13,7 +13,18 @@ import {
 import { motion } from "framer-motion";
 import Footer from "../component/Footer";
 import bgImage from "../assets/bg1.webp";
+import Loader from "./Loader";
 function Service() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    // simulate async loading (API call / assets load etc.)
+    const timer = setTimeout(() => {
+      setLoading(false); // loader close
+    }, 2000); // 2 sec demo
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const services = [
     {
       title: "Bookkeeping",
@@ -80,134 +91,138 @@ function Service() {
   // Use brand colors for hover effect
 
   return (
-    <div>
-      <Header />
-      <div style={heroStyles} className="hero-section">
-        <div className="overlay-before"></div>
-        <div className="overlay-after"></div>
-        <Container style={contentStyle}>
-          <Row>
-            <Col>
-              <h1 className="fw-bold display-4 mb-3 text-center text-md-start">
-                Our Services
-              </h1>
-              <Breadcrumb className="custom-breadcrumb justify-content-center justify-content-md-start">
-                <Breadcrumb.Item href="/">Home</Breadcrumb.Item>
-                <Breadcrumb.Item active style={{ color: "#e45c3c" }}>
-                  Our Services
-                </Breadcrumb.Item>
-              </Breadcrumb>
-            </Col>
-          </Row>
-        </Container>
-      </div>
+    <>
+      {loading ? (
+        <Loader />
+      ) : (
+        <div>
+          <Header />
+          <div style={heroStyles} className="hero-section">
+            <div className="overlay-before"></div>
+            <div className="overlay-after"></div>
+            <Container style={contentStyle}>
+              <Row>
+                <Col>
+                  <h1 className="fw-bold display-4 mb-3 text-center text-md-start">
+                    Our Services
+                  </h1>
+                  <Breadcrumb className="custom-breadcrumb justify-content-center justify-content-md-start">
+                    <Breadcrumb.Item href="/">Home</Breadcrumb.Item>
+                    <Breadcrumb.Item active style={{ color: "#e45c3c" }}>
+                      Our Services
+                    </Breadcrumb.Item>
+                  </Breadcrumb>
+                </Col>
+              </Row>
+            </Container>
+          </div>
 
-      <section className="py-5 bg-light">
-        <Container>
-          <h4 className="text-center mb-4 head-title">Our Services</h4>
-          <Row className="g-4">
-            {services.map((service, index) => (
-              <Col key={index} xs={12} sm={6} lg={4}>
-                <motion.div
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.2 }}
-                  onMouseEnter={() => setFlippedIndex(index)}
-                  onMouseLeave={() => setFlippedIndex(null)}
-                  style={{
-                    perspective: "1000px",
-                    height: "320px",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      height: "100%",
-                      transformStyle: "preserve-3d",
-                      transition: "transform 0.6s",
-                      transform:
-                        flippedIndex === index
-                          ? "rotateY(180deg)"
-                          : "rotateY(0deg)",
-                    }}
-                  >
-                    {/* Front */}
-                    <Card
+          <section className="py-5 bg-light">
+            <Container>
+              <h4 className="text-center mb-4 head-title">Our Services</h4>
+              <Row className="g-4">
+                {services.map((service, index) => (
+                  <Col key={index} xs={12} sm={6} lg={4}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 50 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.6, delay: index * 0.2 }}
+                      onMouseEnter={() => setFlippedIndex(index)}
+                      onMouseLeave={() => setFlippedIndex(null)}
                       style={{
-                        height: "100%",
-                        backfaceVisibility: "hidden",
-                        borderRadius: "16px",
-                        overflow: "hidden",
-                        position: "absolute",
-                        width: "100%",
+                        perspective: "1000px",
+                        height: "320px",
                       }}
                     >
-                      <Card.Img
-                        src={service.image}
-                        alt={service.title}
-                        loading="lazy"
-                        style={{ height: "200px", objectFit: "cover" }}
-                      />
-                      <Card.Body className="text-center">
-                        <div
-                          className="mb-3"
-                          style={{
-                            background: service.gradient,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                          }}
-                        >
-                          {service.icon}
-                        </div>
-                        <Card.Title
-                          className="fw-bold"
-                          style={{
-                            background: service.gradient,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                          }}
-                        >
-                          {service.title}
-                        </Card.Title>
-                      </Card.Body>
-                    </Card>
-                    {/* Back */}
-                    <Card
-                      style={{
-                        background: service.gradient,
-                        color: "#fff",
-                        height: "100%",
-                        backfaceVisibility: "hidden",
-                        transform: "rotateY(180deg)",
-                        position: "absolute",
-                        width: "100%",
-                        borderRadius: "16px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <div className="mb-3">{service.icon}</div>
-                      <h5 className="fw-bold">{service.title}</h5>
-                      <Link
-                        to={`/service/${service.slug}`}
-                        className="btn btn-light mt-3"
+                      <div
+                        style={{
+                          position: "relative",
+                          width: "100%",
+                          height: "100%",
+                          transformStyle: "preserve-3d",
+                          transition: "transform 0.6s",
+                          transform:
+                            flippedIndex === index
+                              ? "rotateY(180deg)"
+                              : "rotateY(0deg)",
+                        }}
                       >
-                        READ MORE
-                      </Link>
-                    </Card>
-                  </div>
-                </motion.div>
-              </Col>
-            ))}
-          </Row>
-        </Container>
-      </section>
-      <Footer />
-      <style>{`
+                        {/* Front */}
+                        <Card
+                          style={{
+                            height: "100%",
+                            backfaceVisibility: "hidden",
+                            borderRadius: "16px",
+                            overflow: "hidden",
+                            position: "absolute",
+                            width: "100%",
+                          }}
+                        >
+                          <Card.Img
+                            src={service.image}
+                            alt={service.title}
+                            loading="lazy"
+                            style={{ height: "200px", objectFit: "cover" }}
+                          />
+                          <Card.Body className="text-center">
+                            <div
+                              className="mb-3"
+                              style={{
+                                background: service.gradient,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                              }}
+                            >
+                              {service.icon}
+                            </div>
+                            <Card.Title
+                              className="fw-bold"
+                              style={{
+                                background: service.gradient,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                              }}
+                            >
+                              {service.title}
+                            </Card.Title>
+                          </Card.Body>
+                        </Card>
+                        {/* Back */}
+                        <Card
+                          style={{
+                            background: service.gradient,
+                            color: "#fff",
+                            height: "100%",
+                            backfaceVisibility: "hidden",
+                            transform: "rotateY(180deg)",
+                            position: "absolute",
+                            width: "100%",
+                            borderRadius: "16px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div className="mb-3">{service.icon}</div>
+                          <h5 className="fw-bold">{service.title}</h5>
+                          <Link
+                            to={`/service/${service.slug}`}
+                            className="btn btn-light mt-3"
+                          >
+                            READ MORE
+                          </Link>
+                        </Card>
+                      </div>
+                    </motion.div>
+                  </Col>
+                ))}
+              </Row>
+            </Container>
+          </section>
+          <Footer />
+          <style>{`
   .hero-section .overlay-before {
     position: absolute;
     inset: 0;
@@ -251,7 +266,9 @@ function Service() {
   }
     
 `}</style>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 

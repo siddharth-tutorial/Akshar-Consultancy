@@ -16,6 +16,7 @@ import Audit from "./pages/service/Audit";
 import TaxReturn from "./pages/service/TaxReturn";
 import Payroll from "./pages/service/Payroll";
 import Foreign from "./pages/service/Foreign";
+import Loader from "./pages/Loader";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
         <Route path="/calculator/tds" element={<Tds />} />
         <Route path="/calculator/netprofit" element={<Netprofit />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/loader" element={<Loader />} />
       </Routes>
     </div>
   );

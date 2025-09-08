@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Row, Col } from "react-bootstrap";
 import Header from "../../component/Header";
 import Footer from "../../component/Footer";
+import Loader from "../Loader";
 
 const sectionRates = {
   "193,interest on Securities": 10,
@@ -52,10 +53,12 @@ const sectionRates = {
 
 const sectionNotes = {
   193: "No TDS is deductible for payments not exceeding Rs. 5000.",
-  "194A": "No TDS is deductible for payments not exceeding Rs. 10000 (Banks) & Rs. 5000 (Others)",
+  "194A":
+    "No TDS is deductible for payments not exceeding Rs. 10000 (Banks) & Rs. 5000 (Others)",
   "194B": "No TDS is deductible for payments not exceeding Rs. 10000",
   "194BB": "No TDS is deductible for payments not exceeding Rs. 10000",
-  "194C": "No TDS is deductible for payments not exceeding Rs. 30000 Per Contract or Rs. 100000 per Annum",
+  "194C":
+    "No TDS is deductible for payments not exceeding Rs. 30000 Per Contract or Rs. 100000 per Annum",
   "194D": "No TDS is deductible for payments not exceeding Rs. 15000.",
   "194EE": "No TDS is deductible for payments not exceeding Rs. 2500.",
   "194F": "No TDS is deductible for payments not exceeding Rs. 1000.",
@@ -95,112 +98,135 @@ function Tds() {
     }
   }, [section, panQuoted]);
 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <>
-      <Header />
-      <Container className="mt-5 mb-5">
-        <Card className="shadow border rounded-lg">
-          <Card.Header className="text-center bg-primary text-white py-2">
-            <h5 className="m-0">TDS Calculator</h5>
-          </Card.Header>
+      {loading ? (
+        <Loader />
+      ) : (
+        <>
+          <Header />
+          <Container className="mt-5 mb-5">
+            <Card className="shadow border rounded-lg">
+              <Card.Header className="text-center bg-primary text-white py-2">
+                <h5 className="m-0">TDS Calculator</h5>
+              </Card.Header>
 
-          <Card.Body className="bg-light">
-            <Row className="mb-3">
-              <Col md={6}>
-                <Form.Label>Section</Form.Label>
-                <Form.Select
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                >
-                  <option value="">Select</option>
-                  {Object.keys(sectionRates).map((item, idx) => (
-                    <option key={idx} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Col>
-              {!sectionCode.startsWith("206C") && (
-                <Col md={6}>
-                  <Form.Label>PAN quoted by deductee</Form.Label>
-                  <Form.Select
-                    value={panQuoted}
-                    onChange={(e) => setPanQuoted(e.target.value)}
-                  >
-                    <option>Yes</option>
-                    <option>No</option>
-                  </Form.Select>
-                </Col>
-              )}
-            </Row>
+              <Card.Body className="bg-light">
+                <Row className="mb-3">
+                  <Col md={6}>
+                    <Form.Label>Section</Form.Label>
+                    <Form.Select
+                      value={section}
+                      onChange={(e) => setSection(e.target.value)}
+                    >
+                      <option value="">Select</option>
+                      {Object.keys(sectionRates).map((item, idx) => (
+                        <option key={idx} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  {!sectionCode.startsWith("206C") && (
+                    <Col md={6}>
+                      <Form.Label>PAN quoted by deductee</Form.Label>
+                      <Form.Select
+                        value={panQuoted}
+                        onChange={(e) => setPanQuoted(e.target.value)}
+                      >
+                        <option>Yes</option>
+                        <option>No</option>
+                      </Form.Select>
+                    </Col>
+                  )}
+                </Row>
 
-            <Row className="mb-3 align-items-center">
-              <Col md={2}>
-                <Form.Label>Rate:</Form.Label>
-                <Form.Control type="text" value={rate} readOnly />
-              </Col>
-              <Col md={1}><span className="fw-bold">%</span></Col>
-              <Col md={9}>
-                <Form.Range min={0} max={50} step={0.5} value={rate} disabled />
-              </Col>
-            </Row>
+                <Row className="mb-3 align-items-center">
+                  <Col md={2}>
+                    <Form.Label>Rate:</Form.Label>
+                    <Form.Control type="text" value={rate} readOnly />
+                  </Col>
+                  <Col md={1}>
+                    <span className="fw-bold">%</span>
+                  </Col>
+                  <Col md={9}>
+                    <Form.Range
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      value={rate}
+                      disabled
+                    />
+                  </Col>
+                </Row>
 
-            <Row className="mb-3 align-items-center">
-              <Col md={2}>
-                <Form.Label>Amount:</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={amount}
-                  onChange={(e) =>
-                    setAmount(parseFloat(e.target.value) || 0)
-                  }
-                />
-              </Col>
-              <Col md={1}><span className="fw-bold">0</span></Col>
-              <Col md={9}>
-                <Form.Range
-                  min={0}
-                  max={100000}
-                  step={1000}
-                  value={amount}
-                  onChange={(e) =>
-                    setAmount(parseFloat(e.target.value))
-                  }
-                />
-              </Col>
-            </Row>
+                <Row className="mb-3 align-items-center">
+                  <Col md={2}>
+                    <Form.Label>Amount:</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={amount}
+                      onChange={(e) =>
+                        setAmount(parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </Col>
+                  <Col md={1}>
+                    <span className="fw-bold">0</span>
+                  </Col>
+                  <Col md={9}>
+                    <Form.Range
+                      min={0}
+                      max={100000}
+                      step={1000}
+                      value={amount}
+                      onChange={(e) => setAmount(parseFloat(e.target.value))}
+                    />
+                  </Col>
+                </Row>
 
-            <Row className="mb-3">
-              <Col md={6}>
-                <Form.Label>Tax:</Form.Label>
-                <Form.Control value={tax} readOnly />
-              </Col>
-            </Row>
+                <Row className="mb-3">
+                  <Col md={6}>
+                    <Form.Label>Tax:</Form.Label>
+                    <Form.Control value={tax} readOnly />
+                  </Col>
+                </Row>
 
-            {section ===
-              "206C,Bullion, jewelleryor Any other goods or services" && (
-              <p className="fw-bold text-dark mt-3">
-                Note:- If sale consideration is paid in cash exceeding Rs. 5 lakhs (Jewellery),
-                Rs. 2 lakhs (Bullion), or Rs. 2 lakhs (other goods/services where TDS is not deducted)
-              </p>
-            )}
+                {section ===
+                  "206C,Bullion, jewelleryor Any other goods or services" && (
+                  <p className="fw-bold text-dark mt-3">
+                    Note:- If sale consideration is paid in cash exceeding Rs. 5
+                    lakhs (Jewellery), Rs. 2 lakhs (Bullion), or Rs. 2 lakhs
+                    (other goods/services where TDS is not deducted)
+                  </p>
+                )}
 
-            {section &&
-              section !==
-                "206C,Bullion, jewelleryor Any other goods or services" &&
-              sectionNotes[sectionCode] && (
-                <p className="fw-bold text-dark mt-3">
-                  Note:- {sectionNotes[sectionCode]}
-                </p>
-              )}
-          </Card.Body>
-        </Card>
-      </Container>
-      <Footer />
+                {section &&
+                  section !==
+                    "206C,Bullion, jewelleryor Any other goods or services" &&
+                  sectionNotes[sectionCode] && (
+                    <p className="fw-bold text-dark mt-3">
+                      Note:- {sectionNotes[sectionCode]}
+                    </p>
+                  )}
+              </Card.Body>
+            </Card>
+          </Container>
+          <Footer />
+        </>
+      )}
     </>
   );
 }
 
 export default Tds;
-
-
